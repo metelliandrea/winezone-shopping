@@ -28,8 +28,8 @@ async function bootstrap() {
   // Swagger
   const swaggerOptions: SwaggerDocumentOptions = {};
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Winezone-products')
-    .setDescription("Winezone! Product's microservice API")
+    .setTitle('Winezone-shopping')
+    .setDescription('Winezone! Shopping cart microservice API')
     .setVersion('1.0')
     .addTag('Products')
     .setLicense(

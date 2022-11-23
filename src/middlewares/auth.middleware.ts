@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { AxiosError } from 'axios';
 import { Request, Response } from 'express';
 import { ExtractJwt } from 'passport-jwt';
-import { catchError, lastValueFrom, retry } from 'rxjs';
+import { catchError, firstValueFrom, retry } from 'rxjs';
 
 @Injectable()
 export class AuthenticationMiddleware implements NestMiddleware {
@@ -21,7 +21,7 @@ export class AuthenticationMiddleware implements NestMiddleware {
   ) {}
 
   async use(req: Request, res: Response, next: (error?: any) => void) {
-    const { data } = await lastValueFrom(
+    const { data } = await firstValueFrom(
       this.httpService
         .get(
           `http://${this.configService.get<string>(
@@ -31,10 +31,10 @@ export class AuthenticationMiddleware implements NestMiddleware {
           )}/auth/verify`,
           {
             headers: {
-              Authorization: ExtractJwt.fromAuthHeaderAsBearerToken().call(
+              Authorization: `Bearer ${ExtractJwt.fromAuthHeaderAsBearerToken().call(
                 null,
                 req,
-              ),
+              )}`,
               'X-Correlation-Id': req.headers['x-correlation-id'],
             },
           },

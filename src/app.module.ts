@@ -6,9 +6,6 @@ import {
 } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-// import { TypeOrmModule } from '@nestjs/typeorm';
-// import { ProductsModule } from './products/products.module';
-// import { TypeOrmConfigService } from './config/database/database.config';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { v4 } from 'uuid';
@@ -62,12 +59,11 @@ import { AuthenticationMiddleware } from './middlewares/auth.middleware';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
-// export class AppModule implements NestModule {
-//   configure(consumer: MiddlewareConsumer) {
-//     consumer
-//       .apply(AuthenticationMiddleware)
-//       // .exclude({ path: 'auth/login/*', method: RequestMethod.POST })
-//       .forRoutes({ path: '*', method: RequestMethod.ALL });
-//   }
-// }
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(AuthenticationMiddleware)
+      // .exclude({ path: 'auth/login/*', method: RequestMethod.POST })
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
+  }
+}

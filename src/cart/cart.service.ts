@@ -8,7 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { RedisService } from 'nestjs-redis';
-import { catchError, lastValueFrom, retry } from 'rxjs';
+import { catchError, firstValueFrom, retry } from 'rxjs';
 import { RpcError } from 'src/errors/rpc.error';
 import { ExceptionFilter } from 'src/filters/rpcException.filter';
 import { CartItemDto } from './dto/cartItem.dto';
@@ -26,13 +26,13 @@ export class CartService {
   @UseFilters(new ExceptionFilter())
   async getAllItemsInCart(user: any): Promise<ICart> {
     try {
-      // const { userId } = user;
-      const { userId } = { userId: '12345' };
+      const { guid } = user;
+
       const cart = { items: [], total: 0 };
 
-      const exists = await this.redis.getClient().exists(userId);
+      const exists = await this.redis.getClient().exists(guid);
       if (exists) {
-        const items = await this.redis.getClient().lrange(userId, -100, 100);
+        const items = await this.redis.getClient().lrange(guid, -100, 100);
 
         const json = {};
         items.forEach((i) => (json[i] = (json[i] || 0) + 1));
@@ -44,7 +44,7 @@ export class CartService {
               if (i === this.config.get<string>('EMPTY_CART_SYMBOL')) return;
 
               // __CHIAMATA A RABBIT
-              const [details] = await lastValueFrom(
+              const [details] = await firstValueFrom(
                 this.client
                   .send('products_details', {
                     products: [i],
@@ -81,7 +81,7 @@ export class CartService {
             } catch (err) {
               this.logger.error(
                 {
-                  userId,
+                  guid,
                   function: 'getAllItemsInCart',
                   child:
                     err instanceof RpcError ? (err as RpcError).context : null,
@@ -96,6 +96,8 @@ export class CartService {
 
         // return cart;
       }
+
+      return cart;
     } catch (err) {
       throw err;
     }
@@ -103,8 +105,7 @@ export class CartService {
 
   async addItemsToCart(user: any, cartItemDto: CartItemDto) {
     try {
-      // const { userId } = user;
-      const { userId } = { userId: '12345' };
+      const { guid } = user;
 
       async function* times(t) {
         let i = 0;
@@ -115,7 +116,7 @@ export class CartService {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for await (const _ of times(cartItemDto.quantity)) {
-        await this.redis.getClient().lpush(userId, cartItemDto.productId);
+        await this.redis.getClient().lpush(guid, cartItemDto.productId);
       }
 
       this.notifyStockUpdate(
@@ -129,7 +130,7 @@ export class CartService {
     } catch (err) {
       this.logger.error(
         {
-          userId: user.userId,
+          guid: user.guid,
           function: 'getAllItemsInCart',
           child: err instanceof RpcError ? (err as RpcError).context : null,
         },
@@ -142,8 +143,7 @@ export class CartService {
 
   async removeItemsFromCart(user: any, cartItemDto: CartItemDto) {
     try {
-      // const { userId } = user;
-      const { userId } = { userId: '12345' };
+      const { guid } = user;
 
       async function* times(t) {
         let i = 0;
@@ -154,7 +154,7 @@ export class CartService {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for await (const _ of times(cartItemDto.quantity)) {
-        await this.redis.getClient().lrem(userId, 1, cartItemDto.productId);
+        await this.redis.getClient().lrem(guid, 1, cartItemDto.productId);
       }
 
       this.notifyStockUpdate(
@@ -168,7 +168,7 @@ export class CartService {
     } catch (err) {
       this.logger.error(
         {
-          userId: user.userId,
+          guid: user.guid,
           function: 'addItemsToCart',
           child: err instanceof RpcError ? (err as RpcError).context : null,
         },
@@ -181,21 +181,20 @@ export class CartService {
 
   async emptyCart(user: any) {
     try {
-      // const { userId } = user;
-      const { userId } = { userId: '12345' };
+      const { guid } = user;
 
       const cart = { items: [], total: 0 };
 
-      const exists = await this.redis.getClient().exists(userId);
+      const exists = await this.redis.getClient().exists(guid);
       if (exists) {
         // Read items from cart
-        const items = await this.redis.getClient().lrange(userId, -100, 100);
+        const items = await this.redis.getClient().lrange(guid, -100, 100);
 
         // Delete cart
-        await this.redis.getClient().del(userId);
+        await this.redis.getClient().del(guid);
         await this.redis
           .getClient()
-          .lpush(userId, this.config.get<string>('EMPTY_CART_SYMBOL'));
+          .lpush(guid, this.config.get<string>('EMPTY_CART_SYMBOL'));
 
         const json = {};
         items.forEach((i) => (json[i] = (json[i] || 0) + 1));
@@ -216,7 +215,7 @@ export class CartService {
 
   async notifyStockUpdate(cartItem: CartItemDto, action: string) {
     try {
-      lastValueFrom(
+      firstValueFrom(
         this.client
           .send('update_stock', {
             productId: cartItem.productId,
