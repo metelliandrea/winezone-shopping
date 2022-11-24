@@ -59,4 +59,39 @@ spec:
       name: http
   selector:
     app: winezone
+---
+apiVersion: v1
+items:
+- apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    annotations:
+      kubernetes.io/app-root: /
+      kubernetes.io/ingress.allow-http: "false"
+      kubernetes.io/ingress.class: nginx
+      kubernetes.io/rewrite-target: /
+      nginx.ingress.kubernetes.io/enable-rewrite-log: "true"
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      nginx.ingress.kubernetes.io/use-regex: "true"
+    generation: 1
+    labels:
+      app.kubernetes.io/instance: winezone-shopping
+      app.kubernetes.io/name: winezone
+    name: winezone-shopping
+    namespace: winezone
+  spec:
+    rules:
+    - host: winezone.dinamoretail.it
+      http:
+        paths:
+        - backend:
+            service:
+              name: winezone-shopping-svc
+              port:
+                number: 3002
+          path: /shopping/(.*)
+          pathType: ImplementationSpecific
+kind: List
+metadata:
+  resourceVersion: ""
 
