@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: winezone-shopping
+  labels:
+    app: winezone
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: winezone
+  template:
+    metadata:
+      labels:
+        app: winezone
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: winezone-shopping
+          image: bgpcloudsbx.azurecr.io/winezone-shopping:0.0.1
+          imagePullPolicy: Always
+          envFrom:
+          - configMapRef:
+              name: winezone-configmap
+          - secretRef:
+              name: winezone-secret
+          env:
+          - name: DATABASE_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: winezone-configmap
+                key: SHOPPING_DATABASE_NAME
+                optional: false
+          - name: PORT
+            valueFrom:
+              configMapKeyRef:
+                name: winezone-configmap
+                key: SHOPPING_PORT
+                optional: false      
+          ports:
+            - name: http
+              containerPort: 3002
+              protocol: TCP
+          resources:
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: winezone-shopping-svc
+  labels:
+    app: winezone
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3002
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: winezone
+
