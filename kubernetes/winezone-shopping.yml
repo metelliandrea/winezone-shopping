@@ -81,7 +81,7 @@ items:
     namespace: winezone
   spec:
     rules:
-    - host: winezone.dinamoretail.it
+    - host: shopping.winezone.dinamoretail.com
       http:
         paths:
         - backend:
@@ -89,7 +89,7 @@ items:
               name: winezone-shopping-svc
               port:
                 number: 3002
-          path: /shopping/(.*)
+          path: /(.*)
           pathType: ImplementationSpecific
 kind: List
 metadata:
